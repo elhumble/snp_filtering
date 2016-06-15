@@ -6,3 +6,5 @@
 /output/figs
 /data/processed
 /data/blastdb
+/snp_filtering_cache
+/snp_filtering_files
