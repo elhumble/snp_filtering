@@ -8,20 +8,21 @@ output: html_document
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", cache = TRUE) # warning = FALSE
 ```
 
-This document provides the code for the main steps for our transcriptomic SNP discovery pipeline. It also includes code for generating the figures in the paper. Both the Rmarkdown file and the data required to run the code can be accessed by downloading this [GitHub](https://github.com/elhumble/snp_filtering) repository. Just click the link and then on *Download ZIP* at the right-hand side of the page. Part of this analysis relies on a large BLAST formatted genome database. You should download the full draft fur seal genome from [Dryad](http://datadryad.org/resource/doi:10.5061/dryad.8kn8c) and format it into a BLAST database. If you have any questions, please contact me: `emily.lhumble[at]gmail.com`
+This document provides the code for the main steps in our transcriptomic SNP discovery pipeline. It also includes code for generating the figures in the paper. Both the Rmarkdown file and the data required to run the code can be accessed by downloading this [GitHub](https://github.com/elhumble/snp_filtering) repository. Just click the link and then on *Download ZIP* at the right-hand side of the page. Part of this analysis relies on a large BLAST formatted genome database. You should download the full draft fur seal genome from [Dryad](http://datadryad.org/resource/doi:10.5061/dryad.8kn8c) and format it into a BLAST database. If you have any questions, please contact me: `emily.lhumble[at]gmail.com`
         
 ###Prepare the working environment
 
-- If you have downloaded the `snp_filtering` project from github then the directory structure should be correct
+- If you have downloaded the `snp_filtering` project from github then you will see that:
 - Raw data required are in `data/raw`
-- Processed data will be saved in `data/processed`
 - R scripts sourced by this document are in `R/`
+- You will also need to generate two new directories: `data/processed` and `data/blastdb`
 - The BLAST formatted fur seal genome should be saved in `data/blastdb`. If you have downloaded the full draft genome, you can make it into a BLAST database using the following command: `makeblastdb -in final.assembly.ArcGaz001_AP3.fasta -dbtype nucl -out furseal`
-- This script invokes two system commands to run `blastn` and `bedtools`. The full path to working versions of these programs should be specfied in the script accordingly.
-- The packages listed below are required. NOTE: The development version of dplyr is required.
+- This pipeline invokes two system commands to run `blastn` and `bedtools`. The full path to working versions of these programs should be specfied in the script accordingly.
+- The packages listed below are required. NOTE: The development version of `dplyr` is also required.
 
 ```{r, results="hide", message=FALSE, cache=TRUE}
 # uncomment the lines below to install the packages you need 
+
 # source("http://bioconductor.org/biocLite.R")
 # biocLite("VariantAnnotation")
 # biocLite("ggbio")
@@ -164,9 +165,9 @@ illuminaID <- as.character(vennIDs(illumina))
 # dev.off()
 ```
 
-- For SNPs called from the `original` transcriptome (18,971), calculate mean *MAF* and *depth*
-- For SNPs called from the `illumina` transcriptome (20,426), calculate mean *MAF* and *depth*
-- Repeat these steps for the SNPs called by both methods: `intersect` (4,679)
+- For SNPs called from the `original` transcriptome `r length(illumina[,1])`, calculate mean *MAF* and *depth*
+- For SNPs called from the `illumina` transcriptome `r length(original[,1])`, calculate mean *MAF* and *depth*
+- Repeat these steps for the SNPs called by both methods: `intersect` (`r length(intersect[,1])`)
 
 ```{r, message=FALSE, warning=FALSE, fig.show='hold', fig.align='centre', fig.width=4, fig.height=4}
 depth_maf_454 <- matrix(ncol = 2, nrow = length(original[,1]))
@@ -196,7 +197,7 @@ names(depth_maf_int) <- c("Depth_Illumina", "MAF_Illumina", "Depth_454", "MAF_45
 ```
 
 - Use **MAF** and **depth** data to make marginal plots using the `my.filled.contour` function. This applies a kernel density function to the data with which it uses to make the contour plot. Histograms are plotted using the raw **MAF** and **depth** data.
-- Repeat these steps for the SNPs called from both illumina and 454 sequencing data (4679). Code hidden in output.
+- Repeat these steps for the SNPs called from both illumina and 454 sequencing data (`r length(intersect[,1])`). Code hidden in output.
 
 ```{r, fig.show='hold', fig.align='centre', fig.width=4, fig.height=4}
 source("R/my.filled.contour.R")
@@ -286,7 +287,7 @@ barplot(h2$counts, axes=F, xlim=c(0, top), space=0, col='#bfd3e6', horiz=T)
 
 ```
 
-Depth of coverage is on the **x** axis and minor allele frequency is on the **y** axis. The upper panels correspond to the total number of SNPs called from the 454 (top left) and illumina data (top right). The lower panels correpsond to the 4679 SNPs that were called from both the 454 and illumina datasets. The left plots shows the 454 parameter space and the  right plots shows the corresponding illumina parameter space.
+Depth of coverage is on the **x** axis and minor allele frequency is on the **y** axis. The upper panels correspond to the total number of SNPs called from the 454 (top left) and illumina data (top right). The lower panels correpsond to the `r length(intersect[,1])` SNPs that were called from both the 454 and illumina datasets. The left plots shows the 454 parameter space and the  right plots shows the corresponding illumina parameter space.
 
 ***
 ###Filtering for a SNP array
@@ -363,7 +364,7 @@ getADTfile(infinium)
 getPconvertfile(axiom)
 ```
 
-The files returned by each manufacturer are stored in `data/`
+The files returned by each manufacturer are stored in `output/design_scores`
 
 - Import files and add useful information to each SNP dataset
 - Retain `infinium` SNPs with an ADT score above 0.8
@@ -441,7 +442,7 @@ cmds <- mapply(FUN = cmdCreate, infile = infilenames, outfile = outnames)
 
 ###4. Predict SNP validation outcomes
 - Create dataframes containing SNP metadata and genome BLAST results for both `infinium` and `axiom` SNPs. We will use these to evaluate SNP genomic context and predict SNP validation outcomes
-- The development version of dplyr is required for this code to produce the correct output. If for some reason you cannot get it to work, you can import the dataframes I made earlier instead.
+- The development version of `dplyr` is required for this code to produce the correct output. If for some reason you cannot get it to work, you can import the dataframes I made earlier instead.
 
 ```{r, warning=F, message=F}
 # These pipes require development version of dplyr
@@ -487,7 +488,7 @@ axiom_df <- make_model_df(axiom)
 # axiom_df <- read.table("data/processed/axiomSNPs2genome") %>%
 #         blasthitspersnp(., axiom_df)
 
-# Files I already merged earlier (using blast against the full genome)
+# Files I merged earlier (using blast against the full genome)
 infinium_df <- read.csv("data/some_i_made_earlier/infinium_dfwithblast.csv", header = T)
 axiom_df <- read.csv("data/some_i_made_earlier/axiom_dfwithblast.csv", header = T)
 ```
